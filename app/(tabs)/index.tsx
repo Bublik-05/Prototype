@@ -52,7 +52,8 @@ export default function MyGarden() {
         }}
       />
 
-      <TouchableOpacity style={styles.button}>
+      <TouchableOpacity style={styles.button}
+        onPress={() => router.push('/category/all')}>
         <Text style={styles.buttonText}>➕ Добавить растение</Text>
       </TouchableOpacity>
 

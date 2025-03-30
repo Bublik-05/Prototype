@@ -1,27 +1,27 @@
 import { View, Text, StyleSheet, Switch, TouchableOpacity } from 'react-native';
 import { useState } from 'react';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function SettingsScreen() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { theme, toggleTheme } = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [language, setLanguage] = useState('ru');
 
+  const isDarkMode = theme === 'dark';
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>⚙️ Настройки</Text>
+    <View style={[styles.container, { backgroundColor: isDarkMode ? '#222' : '#f3fdf3' }]}>
+      <Text style={[styles.title, { color: isDarkMode ? '#fff' : '#000' }]}>⚙️ Настройки</Text>
 
       {/* Тема */}
       <View style={styles.settingRow}>
-        <Text style={styles.label}>Тёмная тема</Text>
-        <Switch
-          value={isDarkMode}
-          onValueChange={(value) => setIsDarkMode(value)}
-        />
+        <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#000' }]}>Тёмная тема</Text>
+        <Switch value={isDarkMode} onValueChange={toggleTheme} />
       </View>
 
       {/* Язык */}
       <View style={styles.settingRow}>
-        <Text style={styles.label}>Язык интерфейса</Text>
+        <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#000' }]}>Язык интерфейса</Text>
         <TouchableOpacity
           style={styles.languageBtn}
           onPress={() => setLanguage(language === 'ru' ? 'en' : 'ru')}
@@ -34,7 +34,7 @@ export default function SettingsScreen() {
 
       {/* Уведомления */}
       <View style={styles.settingRow}>
-        <Text style={styles.label}>Уведомления</Text>
+        <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#000' }]}>Уведомления</Text>
         <Switch
           value={notificationsEnabled}
           onValueChange={(value) => setNotificationsEnabled(value)}
@@ -50,7 +50,7 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f3fdf3' },
+  container: { flex: 1, padding: 20 },
   title: { fontSize: 24, fontWeight: 'bold', marginBottom: 24 },
   settingRow: {
     flexDirection: 'row',
