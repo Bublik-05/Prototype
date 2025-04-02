@@ -1,97 +1,97 @@
-import { View, Text, StyleSheet, Image, ProgressBarAndroid, Platform } from 'react-native';
+import { useEffect, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { getPlantDetails } from '../../lib/trefle';
+import { plantLibrary } from '../../lib/plantData';
 
-// заглушка данных (в будущем можно брать из базы или из параметров)
-const plantData = {
-  name: 'Фикус',
-  image: null, // пока нет картинки
-  wateringInterval: 3,
-  lastWatered: '2025-03-28',
-  currentWaterLevel: 0.5, // от 0 до 1
-};
-
-import dayjs from 'dayjs';
-
-export default function PlantDetail() {
+export default function PlantPage() {
   const { id } = useLocalSearchParams();
-  const today = dayjs();
-  const nextWaterDate = dayjs(plantData.lastWatered).add(plantData.wateringInterval, 'day');
-  const daysUntilWater = nextWaterDate.diff(today, 'day');
+  const [plant, setPlant] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const statusIcon = daysUntilWater > 0 ? '✅' : '💧';
+  useEffect(() => {
+    if (!id) return;
+
+    const isLocalPlant = typeof id === 'string' && isNaN(Number(id));
+
+    const fetchData = async () => {
+      if (isLocalPlant) {
+        // ищем в plantLibrary
+        const allPlants = Object.values(plantLibrary).flat();
+        const localPlant = allPlants.find((p) => p.id === id);
+        setPlant(localPlant || null);
+        setLoading(false);
+      } else {
+        // загружаем с Trefle
+        const data = await getPlantDetails(id);
+        setPlant(data);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="green" />
+      </View>
+    );
+  }
+
+  if (!plant) {
+    return (
+      <View style={styles.center}>
+        <Text>Ошибка загрузки растения</Text>
+      </View>
+    );
+  }
+
+  const isLocal = plant?.description !== undefined;
 
   return (
-    <View style={styles.container}>
-      {/* Фото растения (заглушка) */}
-      <View style={styles.imagePlaceholder}>
-        <Text style={{ color: '#888' }}>Фото растения</Text>
-        {/* Здесь позже будет <Image source={{ uri: plantData.image }} /> */}
-      </View>
-
-      <Text style={styles.name}>{plantData.name}</Text>
-
-      {/* Таймер */}
-      <Text style={styles.timer}>
-        {daysUntilWater > 0
-          ? `Полив через ${daysUntilWater} дн.`
-          : daysUntilWater === 0
-          ? 'Полить сегодня!'
-          : `Просрочен: ${-daysUntilWater} дн.`}
-      </Text>
-
-      {/* Уровень воды */}
-      <Text style={styles.sectionTitle}>Уровень воды</Text>
-      {Platform.OS === 'android' ? (
-        <ProgressBarAndroid
-          styleAttr="Horizontal"
-          indeterminate={false}
-          progress={plantData.currentWaterLevel}
-          color="green"
-          style={styles.progressBar}
-        />
+    <ScrollView style={styles.container}>
+      {plant.image_url ? (
+        <Image source={{ uri: plant.image_url }} style={styles.image} />
       ) : (
-        <View style={styles.progressBarFallback}>
-          <View
-            style={{
-              backgroundColor: 'green',
-              width: `${plantData.currentWaterLevel * 100}%`,
-              height: '100%',
-              borderRadius: 8,
-            }}
-          />
-        </View>
+        <View style={styles.placeholder}><Text>Нет изображения</Text></View>
       )}
 
-      {/* Статус полива */}
-      <Text style={styles.statusIcon}>{statusIcon}</Text>
-    </View>
+      <View style={styles.info}>
+        <Text style={styles.name}>{plant.common_name || plant.name || 'Без имени'}</Text>
+        <Text style={styles.scientific}>{plant.scientific_name || ''}</Text>
+        {isLocal ? (
+        <>
+          <Text style={styles.detail}>Полив: {plant.water}</Text>
+          <Text style={styles.detail}>Советы: {plant.tips}</Text>
+          <Text style={styles.detail}>{plant.description}</Text>
+        </> 
+      ) : (
+        <>
+          <Text style={styles.detail}>Семейство: {String(plant.family?.name || '-')}</Text>
+          <Text style={styles.detail}>Род: {String(plant.genus?.name || '-')}</Text>
+          <Text style={styles.detail}>Вид: {String(plant.slug?.name || '-')}</Text>
+        </>
+      )}
+
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f8fff8' },
-  imagePlaceholder: {
-    backgroundColor: '#e0e0e0',
-    height: 180,
-    borderRadius: 12,
+  container: { flex: 1 },
+  image: { width: '100%', height: 200 },
+  placeholder: {
+    height: 200,
+    backgroundColor: '#ddd',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
   },
-  name: { fontSize: 26, fontWeight: 'bold', marginBottom: 10 },
-  timer: { fontSize: 18, marginBottom: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: '500', marginBottom: 4 },
-  progressBar: { height: 10, borderRadius: 10, marginBottom: 20 },
-  progressBarFallback: {
-    height: 10,
-    backgroundColor: '#ccc',
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
-  statusIcon: {
-    fontSize: 40,
-    textAlign: 'center',
-    marginTop: 30,
-  },
+  info: { padding: 20 },
+  name: { fontSize: 24, fontWeight: 'bold' },
+  scientific: { fontSize: 16, fontStyle: 'italic', marginBottom: 10 },
+  detail: { fontSize: 16, marginBottom: 6 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });
